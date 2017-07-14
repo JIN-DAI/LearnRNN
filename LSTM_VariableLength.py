@@ -10,6 +10,8 @@ Created on Sun Jul 09 23:01:05 2017
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+from Utils import doublewrap, define_scope
+from CreateTestData import get_batch
 
 
 #%% hyperparameters
@@ -27,34 +29,6 @@ BATCH_START = 0
 
 #%% ===========================================================================
 # customize functions
-#%%
-# function to create test input and output sequence with variable length
-def get_batch(timeSteps=MAX_STEPS, plotSwitch=False):
-    global BATCH_START # declear as gloabal variables to modify their values inside function
-    # xs shape (BATCH_SIZE, timeSteps)
-    xs = np.arange(BATCH_START, BATCH_START+timeSteps*BATCH_SIZE).reshape((BATCH_SIZE, timeSteps)) / 10 * np.pi
-    xs = xs[:,:,np.newaxis]
-
-    # input (BATCH_SIZE, timeSteps, input_size)
-    seq = np.append(np.sin(xs), np.cos(xs), axis=2)
-    # output (BATCH_SIZE, timeSteps, output_size)
-    res = np.append(np.sin(3*xs)**2+3*np.cos(xs+np.pi/6.0)**3, np.tanh(3*np.sin(xs)+np.cos(xs+np.pi/3)), axis=2)
-
-    # increase the start of batch by timeSteps
-    BATCH_START += timeSteps
-    # plot res and seq in the first batch
-    if plotSwitch:
-        plt.subplot(211)
-        plt.plot(xs[0,:], seq[0,:,0], 'r', xs[0,:], seq[0,:,1], 'b--')
-        plt.ylabel('input')
-        plt.subplot(212)
-        plt.plot(xs[0,:], res[0,:,0], 'r', xs[0,:], res[0,:,1], 'b--')
-        plt.ylabel('output')
-        plt.show()
-    # return seq, res and shape (size, step, input)
-    return [seq, res, xs]
-
-
 #%% length of sequence in the same batch
 # assume that the sequences are padded with zero vectors to fill up the remaining time steps in the batch
 def length(sequence):
@@ -223,7 +197,9 @@ if __name__ == '__main__':
     
     for i in range(num_run):
         # obtain one batch
-        seq, res, xs = get_batch(timeSteps=steps[i])
+        seq, res, xs = get_batch(steps[i], BATCH_SIZE, BATCH_START)
+        # increase the start of batch by timeSteps
+        BATCH_START += steps[i]
         # padding to max_steps
         seq_padding = np.append(seq, np.zeros([BATCH_SIZE, MAX_STEPS-steps[i], INPUT_SIZE]), axis=1)
         res_padding = np.append(res, np.zeros([BATCH_SIZE, MAX_STEPS-steps[i], OUTPUT_SIZE]), axis=1)
