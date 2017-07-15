@@ -27,19 +27,21 @@ def length(sequence):
 # define class for LSTMRNN for variable length sequence
 class LSTMRNN(object):
     # initializer
-    def __init__(self, config):
+    def __init__(self, xs, ys, config):
         self.max_steps = config.MAX_STEPS
         self.input_size = config.INPUT_SIZE
         self.output_size = config.OUTPUT_SIZE
         self.cell_size = config.CELL_SIZE
+        self.learning_rate = config.LR
         # placeholders for inputs
         with tf.name_scope('inputs'):
             # placeholder for input: (batch_size, max_steps, input_size)
-            self.xs = tf.placeholder(tf.float32, [None, self.max_steps, self.input_size], name='xs')
+            self.xs = xs
             # placeholder for output: (batch_size, max_steps, output_size)
-            self.ys = tf.placeholder(tf.float32, [None, self.max_steps, self.output_size], name='ys')
-            # placeholder for learing rate
-            self.learning_rate = tf.placeholder(tf.float32, name='learning_rate')  # shape in placeholder?
+            self.ys = ys
+         # ----------------------------------------------------------
+
+        # ----------------------------------------------------------
         # variables for input hidden layer
         # tf.variable_scope('in_hidden'):
         #    self.add_input_layer()

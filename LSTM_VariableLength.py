@@ -22,8 +22,13 @@ def main():
     # global variable decleration
     global BATCH_START
 
+    # placeholder for input: (batch_size, max_steps, input_size)
+    xs = tf.placeholder(tf.float32, [None, conf.MAX_STEPS, conf.INPUT_SIZE], name='xs')
+    # placeholder for output: (batch_size, max_steps, output_size)
+    ys = tf.placeholder(tf.float32, [None, conf.MAX_STEPS, conf.OUTPUT_SIZE], name='ys')
+
     # create an instance of LSTMRNN
-    model = LSTMRNN(conf)
+    model = LSTMRNN(xs, ys, conf)
 
     # create a session
     sess = tf.Session()
@@ -49,7 +54,7 @@ def main():
 
     for i in range(num_run):
         # obtain one batch
-        seq, res, xs = get_batch(steps[i], conf.BATCH_SIZE, BATCH_START)
+        seq, res, t = get_batch(steps[i], conf.BATCH_SIZE, BATCH_START)
         # increase the start of batch by timeSteps
         BATCH_START += steps[i]
         # padding to max_steps
@@ -58,9 +63,8 @@ def main():
 
         # create the feed_dict
         feed_dict = {
-            model.xs: seq_padding,
-            model.ys: res_padding,
-            model.learning_rate: conf.LR
+            xs: seq_padding,
+            ys: res_padding
         }
 
         # run one step of training
@@ -69,11 +73,11 @@ def main():
             feed_dict=feed_dict)
         # plotting
         plt.subplot(211)
-        plt.plot(xs[0, :], res[0, :, 0].flatten(), 'r', xs[0, :], pred[:, 0].flatten()[:steps[i]], 'b--')
+        plt.plot(t[0, :], res[0, :, 0].flatten(), 'r', t[0, :], pred[:, 0].flatten()[:steps[i]], 'b--')
         plt.ylim((-4, 4))
         plt.ylabel('output_feature_1')
         plt.subplot(212)
-        plt.plot(xs[0, :], res[0, :, 1].flatten(), 'r', xs[0, :], pred[:, 1].flatten()[:steps[i]], 'b--')
+        plt.plot(t[0, :], res[0, :, 1].flatten(), 'r', t[0, :], pred[:, 1].flatten()[:steps[i]], 'b--')
         plt.ylim((-2, 2))
         plt.ylabel('output_feature_2')
         plt.draw()
@@ -85,11 +89,11 @@ def main():
             writer.add_summary(result, i)
 
     ## test model
-    test_seq, test_res, test_xs = get_batch(200, conf.BATCH_SIZE, BATCH_START)
+    test_seq, test_res, test_t = get_batch(200, conf.BATCH_SIZE, BATCH_START)
     test_seq = test_seq[0:1, :]
     test_res = test_res[0:1, :]
-    test_xs = test_xs[0, :]
-    test_pred = sess.run(model.pred, feed_dict={model.xs: test_seq, model.ys: test_res})
+    test_t = test_t[0, :]
+    test_pred = sess.run(model.pred, feed_dict={xs: test_seq, ys: test_res})
     test_accuracy = np.mean(np.square(test_res[0, :, :] - test_pred), axis=0)
     print(test_accuracy)
 
