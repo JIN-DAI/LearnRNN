@@ -15,21 +15,25 @@ from RNN_Models import LSTMRNN
 
 
 #%% hyperparameters
-BATCH_SIZE = 50 ## number of proteins
 
-MAX_STEPS = 200  ## number of residues
-INPUT_SIZE = 2   ## number of features for input, such as MSA information ...
-OUTPUT_SIZE = 2  ## number of labels for output, such as Ramachandran angles ...
-CELL_SIZE = 64 ## size of cell
 
-LR = 0.006 ## learning rate
+class Config:
+    # hyperparameters
+    BATCH_SIZE = 50  ## number of proteins
+    LR = 0.006  ## learning rate
+    # Network Parameters
+    MAX_STEPS = 200  ## number of residues
+    INPUT_SIZE = 2   ## number of features for input, such as MSA information ...
+    OUTPUT_SIZE = 2  ## number of labels for output, such as Ramachandran angles ...
+    CELL_SIZE = 64 ## size of cell
+
 
 BATCH_START = 0
 
 
 def main():
     # create an instance of LSTMRNN
-    model = LSTMRNN(MAX_STEPS, INPUT_SIZE, OUTPUT_SIZE, CELL_SIZE)  # 封装
+    model = LSTMRNN(MAX_STEPS, INPUT_SIZE, OUTPUT_SIZE, CELL_SIZE)
 
     # create a session
     sess = tf.Session()
