@@ -28,18 +28,19 @@ def length(sequence):
 class LSTMRNN(object):
     # initializer
     def __init__(self, xs, ys, config):
+        # model parameters
         self.max_steps = config.MAX_STEPS
         self.input_size = config.INPUT_SIZE
         self.output_size = config.OUTPUT_SIZE
         self.cell_size = config.CELL_SIZE
         self.learning_rate = config.LR
-        # placeholders for inputs
+        # model interfaces for inputs
         with tf.name_scope('inputs'):
             # placeholder for input: (batch_size, max_steps, input_size)
             self.xs = xs
             # placeholder for output: (batch_size, max_steps, output_size)
             self.ys = ys
-        # ----------------------------------------------------------
+        # model behaviors
         self.prediction
         self.cost
         self.optimizer
@@ -71,17 +72,16 @@ class LSTMRNN(object):
         # reshape prediction value to (batch_size, max_steps, out_size)
         pred_3D = tf.reshape(self.prediction, [-1, self.max_steps, self.output_size], name='pred_3D')
         # compute losses for each step
-        with tf.name_scope('losses'):
-            # loss on each step (batch_size, max_steps)
-            losses = tf.reduce_sum(self.ms_error(pred_3D, self.ys), reduction_indices=2)
-            # mask of padding part
-            mask = tf.sign(tf.reduce_max(tf.abs(self.ys), reduction_indices=2))
-            # mean losses of each sequence: average along steps
-            # shape: (batch_size,)
-            losses = tf.div(tf.reduce_sum(losses * mask, reduction_indices=1),
-                            # total loss of each sequence by the actual length
-                            tf.reduce_sum(mask, reduction_indices=1),  # divide with actual length
-                            name='average_losses_per_seq')
+        # loss on each step (batch_size, max_steps)
+        losses = tf.reduce_sum(self.ms_error(pred_3D, self.ys), reduction_indices=2)
+        # mask of padding part
+        mask = tf.sign(tf.reduce_max(tf.abs(self.ys), reduction_indices=2))
+        # mean losses of each sequence: average along steps
+        # shape: (batch_size,)
+        losses = tf.div(tf.reduce_sum(losses * mask, reduction_indices=1),
+                        # total loss of each sequence by the actual length
+                        tf.reduce_sum(mask, reduction_indices=1),  # divide with actual length
+                        name='average_losses_per_seq')
         # average loses over batch
         cost_mean = tf.reduce_mean(losses, name='average_cost_per_batch')
         # record cost into summary
