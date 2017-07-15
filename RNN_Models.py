@@ -15,15 +15,6 @@ import tensorflow as tf
 from Utils import define_scope
 
 
-# length of sequence in the same batch
-# assume that the sequences are padded with zero vectors to fill up the remaining time steps in the batch
-def length(sequence):
-    used = tf.sign(tf.reduce_max(tf.abs(sequence), reduction_indices=2))  # take sign of max abs along feature axis
-    length = tf.reduce_sum(used, reduction_indices=1)  # sum along time axis
-    length = tf.cast(length, tf.int32)  # data type -> int32
-    return length
-
-
 # define class for LSTMRNN for variable length sequence
 class LSTMRNN(object):
     # initializer
@@ -54,7 +45,7 @@ class LSTMRNN(object):
         cell_init_state = lstm_cell.zero_state(tf.shape(self.xs)[0], dtype=tf.float32)
         # creates a recurrent neural network specified by RNNCell --> https://www.tensorflow.org/api_docs/python/tf/nn/dynamic_rnn
         cell_outputs, cell_final_state = tf.nn.dynamic_rnn(
-            lstm_cell, self.xs, initial_state=cell_init_state, time_major=False, sequence_length=length(self.xs))
+            lstm_cell, self.xs, initial_state=cell_init_state, time_major=False, sequence_length=LSTMRNN.length(self.xs))
         # ------------------------------------------------------
         # (batch_size, max_steps, cell_size) ==> (batch_size*max_steps, cell_size)
         l_out_x = tf.reshape(cell_outputs, [-1, self.cell_size], name='2_2D')
@@ -109,3 +100,11 @@ class LSTMRNN(object):
         initializer = tf.constant_initializer(0.1)
         return tf.get_variable(shape=shape, initializer=initializer, name=name)
 
+    # length of sequence in the same batch
+    # assume that the sequences are padded with zero vectors to fill up the remaining time steps in the batch
+    @staticmethod
+    def length(sequence):
+        used = tf.sign(tf.reduce_max(tf.abs(sequence), reduction_indices=2))  # take sign of max abs along feature axis
+        length = tf.reduce_sum(used, reduction_indices=1)  # sum along time axis
+        length = tf.cast(length, tf.int32)  # data type -> int32
+        return length
