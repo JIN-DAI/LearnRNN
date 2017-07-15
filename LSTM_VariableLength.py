@@ -68,9 +68,7 @@ def main():
         }
 
         # run one step of training
-        _, cost, state, pred = sess.run(
-            [model.train_op, model.cost, model.cell_final_state, model.pred],
-            feed_dict=feed_dict)
+        _, cost, pred = sess.run([model.optimizer, model.cost, model.prediction], feed_dict=feed_dict)
         # plotting
         plt.subplot(211)
         plt.plot(t[0, :], res[0, :, 0].flatten(), 'r', t[0, :], pred[:, 0].flatten()[:steps[i]], 'b--')
@@ -93,7 +91,7 @@ def main():
     test_seq = test_seq[0:1, :]
     test_res = test_res[0:1, :]
     test_t = test_t[0, :]
-    test_pred = sess.run(model.pred, feed_dict={xs: test_seq, ys: test_res})
+    test_pred = sess.run(model.prediction, feed_dict={xs: test_seq, ys: test_res})
     test_accuracy = np.mean(np.square(test_res[0, :, :] - test_pred), axis=0)
     print(test_accuracy)
 
