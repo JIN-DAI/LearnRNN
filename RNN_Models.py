@@ -12,10 +12,10 @@
 """
 
 import tensorflow as tf
-from Utils import doublewrap, define_scope
+from Utils import define_scope
 
-# customize functions
-# %% length of sequence in the same batch
+
+# length of sequence in the same batch
 # assume that the sequences are padded with zero vectors to fill up the remaining time steps in the batch
 def length(sequence):
     used = tf.sign(tf.reduce_max(tf.abs(sequence), reduction_indices=2))  # take sign of max abs along feature axis
@@ -24,21 +24,20 @@ def length(sequence):
     return length
 
 
-# %%
 # define class for LSTMRNN for variable length sequence
 class LSTMRNN(object):
     # initializer
-    def __init__(self, max_steps, input_size, output_size, cell_size):
-        self.max_steps = max_steps
-        self.input_size = input_size
-        self.output_size = output_size
-        self.cell_size = cell_size
+    def __init__(self, config):
+        self.max_steps = config.MAX_STEPS
+        self.input_size = config.INPUT_SIZE
+        self.output_size = config.OUTPUT_SIZE
+        self.cell_size = config.CELL_SIZE
         # placeholders for inputs
         with tf.name_scope('inputs'):
             # placeholder for input: (batch_size, max_steps, input_size)
-            self.xs = tf.placeholder(tf.float32, [None, max_steps, input_size], name='xs')
+            self.xs = tf.placeholder(tf.float32, [None, self.max_steps, self.input_size], name='xs')
             # placeholder for output: (batch_size, max_steps, output_size)
-            self.ys = tf.placeholder(tf.float32, [None, max_steps, output_size], name='ys')
+            self.ys = tf.placeholder(tf.float32, [None, self.max_steps, self.output_size], name='ys')
             # placeholder for learing rate
             self.learning_rate = tf.placeholder(tf.float32, name='learning_rate')  # shape in placeholder?
         # variables for input hidden layer
