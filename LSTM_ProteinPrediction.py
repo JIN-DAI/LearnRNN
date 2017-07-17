@@ -15,15 +15,13 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-from CreateTestData import get_batch
 from RNN_Models import LSTMRNN
-from Configs import Config
+from Configs import ProteinConfig
 
-BATCH_START = 0
 
 def main():
     # create configuration
-    conf = Config()
+    conf = ProteinConfig()
     # global variable decleration
     global BATCH_START
 

@@ -12,11 +12,24 @@
 """
 
 class Config:
-    # Hyperparameters
-    BATCH_SIZE = 50  ## number of proteins
-    LR = 0.006  ## learning rate
-    # Network Parameters
-    MAX_STEPS = 200  ## number of residues
-    INPUT_SIZE = 2   ## number of features for input, such as MSA information ...
-    OUTPUT_SIZE = 2  ## number of labels for output, such as Ramachandran angles ...
-    CELL_SIZE = 64   ## size of cell
+    def __init__(self):
+        # Hyperparameters
+        self.BATCH_SIZE = 50  ## number of proteins
+        self.LR = 0.006  ## learning rate
+        # Network Parameters
+        self.MAX_STEPS = 200  ## number of residues
+        self.INPUT_SIZE = 2   ## number of features for input, such as MSA information ...
+        self.OUTPUT_SIZE = 2  ## number of labels for output, such as Ramachandran angles ...
+        self.CELL_SIZE = 64   ## size of cell
+
+
+class ProteinConfig:
+    def __init__(self):
+        # Hyperparameters
+        self.BATCH_SIZE = 50  ## number of proteins
+        self.LR = 0.006  ## learning rate
+        # Network Parameters
+        self.MAX_STEPS = 500  ## number of residues
+        self.INPUT_SIZE = 2   ## number of features for input, such as MSA information ...
+        self.OUTPUT_SIZE = 2  ## number of labels for output, such as Ramachandran angles ...
+        self.CELL_SIZE = 64   ## size of cell
