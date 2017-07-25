@@ -27,9 +27,9 @@ class ProteinConfig:
     def __init__(self):
         # Hyperparameters
         self.BATCH_SIZE = 100  ## number of proteins
-        self.LR = 0.006  ## learning rate
+        self.LR = 0.01  ## learning rate
         # Network Parameters
         self.MAX_STEPS = 500  ## number of residues
         self.INPUT_SIZE = 25   ## number of features for input, such as MSA information ...
         self.OUTPUT_SIZE = 2  ## number of labels for output, such as Ramachandran angles ...
-        self.CELL_SIZE = 64   ## size of cell
+        self.CELL_SIZE = 128   ## size of cell
