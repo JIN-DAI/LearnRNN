@@ -14,6 +14,7 @@
 
 #%% import modules
 import os
+import pickle
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,6 +23,10 @@ from Configs import ProteinConfig
 
 
 def main():
+    # index of angles
+    indexAngle = [0,1] # Ramachandran angles
+    # indexAngle = [3,4] # Frenet angles
+
     # create configuration
     conf = ProteinConfig()
 
@@ -46,7 +51,7 @@ def main():
         anglesTrain[i] = np.append(anglesTrain[i], np.zeros([conf.MAX_STEPS-curShape[0],curShape[1]]), axis=0)
     # convert to np array
     TrainFeature = np.array(featuresTrain)
-    TrainAngles = np.array(anglesTrain)
+    TrainAngle = np.array(anglesTrain)
 
     # padding zeros for testing data
     for i in range(len(featuresTest)):
@@ -58,7 +63,7 @@ def main():
         anglesTest[i] = np.append(anglesTest[i], np.zeros([conf.MAX_STEPS-curShape[0],curShape[1]]), axis=0)
     # convert to np array
     TestFeature = np.array(featuresTest)
-    TestAngles = np.array(anglesTest)
+    TestAngle = np.array(anglesTest)
 
     # variable to record start index of batch
     BATCH_START = 0
@@ -88,52 +93,47 @@ def main():
     plt.ion()
     plt.show()
 
-    # total number of runs
-    num_run = 100
-    # number of time steps in each run
-    steps = np.random.randint(conf.MAX_STEPS // 3, conf.MAX_STEPS + 1, num_run)
+    # total number of epoch
+    num_epoch = 20
+    # total number of run
+    num_run = int(num_epoch*TrainFeature.shape[0]/conf.BATCH_SIZE)
+    print("Total number of runs:", num_run)
 
     for i in range(num_run):
         # obtain one batch
-        seq, res, t = get_batch(steps[i], conf.BATCH_SIZE, BATCH_START)
+        feature = TrainFeature[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,:]
+        angle = TrainAngle[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,indexAngle]
         # increase the start of batch by conf.BATCH_SIZE
         BATCH_START += conf.BATCH_SIZE
-        # padding to max_steps
-        seq_padding = np.append(seq, np.zeros([conf.BATCH_SIZE, conf.MAX_STEPS - steps[i], conf.INPUT_SIZE]), axis=1)
-        res_padding = np.append(res, np.zeros([conf.BATCH_SIZE, conf.MAX_STEPS - steps[i], conf.OUTPUT_SIZE]), axis=1)
+        if BATCH_START >= TrainFeature.shape[0]:
+            BATCH_START = 0
 
         # create the feed_dict
-        feed_dict = {
-            xs: seq_padding,
-            ys: res_padding
-        }
+        feed_dict = {xs:feature, ys:angle}
 
         # run one step of training
         _, cost, pred = sess.run([model.optimizer, model.cost, model.prediction], feed_dict=feed_dict)
+
         # plotting
+        # some plot index, removable
+        t = np.arange((i-1)*conf.MAX_STEPS, i*conf.MAX_STEPS)
         plt.subplot(211)
-        plt.plot(t[0, :], res[0, :, 0].flatten(), 'r', t[0, :], pred[:, 0].flatten()[:steps[i]], 'b--')
-        plt.ylim((-4, 4))
+        plt.plot(t, angle[0, :, 0].flatten(), 'r', t, pred[0, :, 0].flatten(), 'b--')
         plt.ylabel('output_feature_1')
         plt.subplot(212)
-        plt.plot(t[0, :], res[0, :, 1].flatten(), 'r', t[0, :], pred[:, 1].flatten()[:steps[i]], 'b--')
-        plt.ylim((-2, 2))
+        plt.plot(t, angle[0, :, 1].flatten(), 'r', t, pred[0, :, 1].flatten(), 'b--')
         plt.ylabel('output_feature_2')
         plt.draw()
         plt.pause(0.3)
-        # write to log
+        # print and write to log
         if i % 20 == 0:
             print('cost: ', round(cost, 4))
             result = sess.run(merged, feed_dict)
             writer.add_summary(result, i)
 
     ## test model
-    test_seq, test_res, test_t = get_batch(200, conf.BATCH_SIZE, BATCH_START)
-    test_seq = test_seq[0:1, :]
-    test_res = test_res[0:1, :]
-    test_t = test_t[0, :]
-    test_pred = sess.run(model.prediction, feed_dict={xs: test_seq, ys: test_res})
-    test_accuracy = np.mean(np.square(test_res[0, :, :] - test_pred), axis=0)
+    test_pred = sess.run(model.prediction, feed_dict={xs: TestFeature, ys: TestAngle[:,:,indexAngle]})
+    test_accuracy = np.mean(np.square(TestAngle[:,:,indexAngle] - test_pred), axis=0)
     print(test_accuracy)
 
 
