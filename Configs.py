@@ -26,7 +26,7 @@ class Config:
 class ProteinConfig:
     def __init__(self):
         # Hyperparameters
-        self.BATCH_SIZE = 50  ## number of proteins
+        self.BATCH_SIZE = 100  ## number of proteins
         self.LR = 0.006  ## learning rate
         # Network Parameters
         self.MAX_STEPS = 500  ## number of residues
