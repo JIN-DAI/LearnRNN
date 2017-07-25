@@ -65,7 +65,7 @@ class LSTMRNN(object):
     def cost(self):
         # compute losses for each step
         # loss on each step (batch_size, max_steps)
-        losses = tf.reduce_sum(self.ms_error(pred_3D, self.ys), reduction_indices=2)
+        losses = tf.reduce_sum(self.ms_error(self.prediction, self.ys), reduction_indices=2)
         # mask of padding part
         mask = tf.sign(tf.reduce_max(tf.abs(self.ys), reduction_indices=2))
         # mean losses of each sequence: average along steps
