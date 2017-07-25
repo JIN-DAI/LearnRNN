@@ -54,14 +54,15 @@ class LSTMRNN(object):
         # bs (out_size,)
         bs_out = self._bias_variable([self.output_size, ])
         # (batch*max_steps, out_size)
-        return tf.matmul(l_out_x, Ws_out) + bs_out
+        pred_2D = tf.matmul(l_out_x, Ws_out) + bs_out
+        # reshape prediction value to (batch_size, max_steps, out_size)
+        pred_3D = tf.reshape(pred_2D, [-1, self.max_steps, self.output_size], name='pred_3D')
+        return pred_3D
 
     # cost function
     # compute cost function by the actual length
     @define_scope
     def cost(self):
-        # reshape prediction value to (batch_size, max_steps, out_size)
-        pred_3D = tf.reshape(self.prediction, [-1, self.max_steps, self.output_size], name='pred_3D')
         # compute losses for each step
         # loss on each step (batch_size, max_steps)
         losses = tf.reduce_sum(self.ms_error(pred_3D, self.ys), reduction_indices=2)
