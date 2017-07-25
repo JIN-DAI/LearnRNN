@@ -11,7 +11,9 @@
 @description:
 """
 
+
 #%% import modules
+import os
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -22,8 +24,44 @@ from Configs import ProteinConfig
 def main():
     # create configuration
     conf = ProteinConfig()
-    # global variable decleration
-    global BATCH_START
+
+    # load data from folder "data"
+    srcPathName = r"data"
+    srcFileTrain = os.path.join(srcPathName, r"train.dat")
+    srcFileTest = os.path.join(srcPathName, r"test.dat")
+    with open(srcFileTrain, 'rb') as fr:
+        featuresTrain = pickle.load(fr)
+        anglesTrain = pickle.load(fr)
+    with open(srcFileTest, 'rb') as fr:
+        featuresTest = pickle.load(fr)
+        anglesTest = pickle.load(fr)
+
+    # padding zeros for training data
+    for i in range(len(featuresTrain)):
+        # features of training
+        curShape = np.shape(featuresTrain[i])
+        featuresTrain[i] = np.append(featuresTrain[i], np.zeros([conf.MAX_STEPS-curShape[0],curShape[1]]), axis=0)
+        # angles of training
+        curShape = np.shape(anglesTrain[i])
+        anglesTrain[i] = np.append(anglesTrain[i], np.zeros([conf.MAX_STEPS-curShape[0],curShape[1]]), axis=0)
+    # convert to np array
+    TrainFeature = np.array(featuresTrain)
+    TrainAngles = np.array(anglesTrain)
+
+    # padding zeros for testing data
+    for i in range(len(featuresTest)):
+        # features of testing
+        curShape = np.shape(featuresTest[i])
+        featuresTest[i] = np.append(featuresTest[i], np.zeros([conf.MAX_STEPS-curShape[0],curShape[1]]), axis=0)
+        # angles of testing
+        curShape = np.shape(anglesTest[i])
+        anglesTest[i] = np.append(anglesTest[i], np.zeros([conf.MAX_STEPS-curShape[0],curShape[1]]), axis=0)
+    # convert to np array
+    TestFeature = np.array(featuresTest)
+    TestAngles = np.array(anglesTest)
+
+    # variable to record start index of batch
+    BATCH_START = 0
 
     # placeholder for input: (batch_size, max_steps, input_size)
     xs = tf.placeholder(tf.float32, [None, conf.MAX_STEPS, conf.INPUT_SIZE], name='xs')
@@ -58,8 +96,8 @@ def main():
     for i in range(num_run):
         # obtain one batch
         seq, res, t = get_batch(steps[i], conf.BATCH_SIZE, BATCH_START)
-        # increase the start of batch by timeSteps
-        BATCH_START += steps[i]
+        # increase the start of batch by conf.BATCH_SIZE
+        BATCH_START += conf.BATCH_SIZE
         # padding to max_steps
         seq_padding = np.append(seq, np.zeros([conf.BATCH_SIZE, conf.MAX_STEPS - steps[i], conf.INPUT_SIZE]), axis=1)
         res_padding = np.append(res, np.zeros([conf.BATCH_SIZE, conf.MAX_STEPS - steps[i], conf.OUTPUT_SIZE]), axis=1)
