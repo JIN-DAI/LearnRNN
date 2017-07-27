@@ -23,7 +23,7 @@ class Config:
         self.CELL_SIZE = 64   ## size of cell
 
 
-class ProteinConfig:
+class RamachandranConfig:
     def __init__(self):
         # Hyperparameters
         self.BATCH_SIZE = 10  ## number of proteins
@@ -32,4 +32,16 @@ class ProteinConfig:
         self.MAX_STEPS = 500  ## number of residues
         self.INPUT_SIZE = 25   ## number of features for input, such as MSA information ...
         self.OUTPUT_SIZE = 3  ## number of labels for output, such as Ramachandran angles ...
+        self.CELL_SIZE = 128   ## size of cell
+
+
+class FrenetConfig:
+    def __init__(self):
+        # Hyperparameters
+        self.BATCH_SIZE = 10  ## number of proteins
+        self.LR = 0.008  ## learning rate
+        # Network Parameters
+        self.MAX_STEPS = 500  ## number of residues
+        self.INPUT_SIZE = 25   ## number of features for input, such as MSA information ...
+        self.OUTPUT_SIZE = 2  ## number of labels for output, such as Ramachandran angles ...
         self.CELL_SIZE = 128   ## size of cell
