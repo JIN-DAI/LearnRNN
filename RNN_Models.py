@@ -17,7 +17,8 @@ from Utils import define_scope
 
 # define class for LSTMRNN for variable length sequence
 class LSTMRNN(object):
-    upper_boundary = 0.1
+    # upper error boundary of sum of angle differences in each chain
+    upper_boundary = 0.5
 
     # initializer
     def __init__(self, xs, ys, config):
@@ -78,7 +79,8 @@ class LSTMRNN(object):
     @define_scope
     def accuracy(self):
         # assuming prediction is correct if losses_seq() is smaller than upper error boundary
-        return tf.reduce_mean(tf.cast(self.losses_seq() <= self.upper_boundary, dtype=tf.float32))
+        #return tf.reduce_mean(tf.cast(self.losses_seq() <= self.upper_boundary, dtype=tf.float32))
+        return tf.reduce_mean(self.losses_seq()) # simplification of accuracy
 
     # train optimizer
     @define_scope
