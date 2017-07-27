@@ -23,9 +23,15 @@ from Configs import ProteinConfig
 
 
 def main():
-    # index of angles
-    indexAngle = [0,1,2] # Ramachandran angles
-    # indexAngle = [3,4] # Frenet angles
+    if True:
+        # Ramachandran angles
+        # index of angles
+        indexAngle = [0,1,2]
+        angleString = ["Phi","Psi","Omega"]
+    else:
+        # Frenet angles
+        indexAngle = [3,4]
+        angleString = ["Kappa", "Tau"]
 
     # create configuration
     conf = ProteinConfig()
@@ -132,7 +138,7 @@ def main():
             lines_pdb[iF] = plt.plot(t, angle[0, :, iF].flatten(), 'r', label='pdb')
             lines_pre[iF] = plt.plot(t, pred[0, :, iF].flatten(), 'b--', label='prediction')
             legd[iF] = plt.legend(loc='upper right')
-            plt.ylabel('output_feature_%d'%(iF+1))
+            plt.ylabel(angleString[iF])
             plt.xlim(0, conf.MAX_STEPS)
             plt.ylim(-4, 4)
         plt.draw()
