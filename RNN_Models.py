@@ -65,7 +65,7 @@ class LSTMRNN(object):
     def cost(self):
         # compute losses for each step
         # loss on each step (batch_size, max_steps)
-        losses = tf.reduce_sum(self.ms_error(self.prediction, self.ys), reduction_indices=2)
+        losses = tf.reduce_sum(LSTMRNN.ms_error_angular(self.prediction, self.ys), reduction_indices=2)
         # mask of padding part
         mask = tf.sign(tf.reduce_max(tf.abs(self.ys), reduction_indices=2))
         # mean losses of each sequence: average along steps
@@ -85,10 +85,6 @@ class LSTMRNN(object):
     def optimizer(self):
         return tf.train.AdamOptimizer(self.learning_rate).minimize(self.cost)
 
-    # mean squared error
-    def ms_error(self, y_pre, y_target):
-        return tf.square(tf.subtract(y_target, y_pre))
-
     # weights: initialized with normal distribution
     def _weight_variable(self, shape, name='weights'):
         # initializer = tf.random_normal_initializer(mean=0., stddev=1.,)
@@ -100,6 +96,16 @@ class LSTMRNN(object):
     def _bias_variable(self, shape, name='biases'):
         initializer = tf.constant_initializer(0.1)
         return tf.get_variable(shape=shape, initializer=initializer, name=name)
+
+    # mean squared error
+    @staticmethod
+    def ms_error(y_pre, y_target):
+        return tf.square(tf.subtract(y_target, y_pre))
+
+    # mean squared error for angular variables
+    @staticmethod
+    def ms_error_angular(y_pre, y_target):
+        return LSTMRNN.ms_error(tf.cos(y_pre), tf.cos(y_target))+LSTMRNN.ms_error(tf.sin(y_pre), tf.sin(y_target))
 
     # length of sequence in the same batch
     # assume that the sequences are padded with zero vectors to fill up the remaining time steps in the batch
