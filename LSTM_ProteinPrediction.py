@@ -92,6 +92,9 @@ def main():
     # open figure to plot
     plt.ion()
     plt.show()
+    lines_pdb = [None]*3
+    lines_pre = [None]*3
+    legd = [None]*3
 
     # total number of epoch
     num_epoch = 1
@@ -116,28 +119,32 @@ def main():
 
         # plotting
         # some plot index, removable
-        t = np.arange((i-1)*conf.MAX_STEPS, i*conf.MAX_STEPS)
-        plt.subplot(311)
-        plt.plot(t, angle[0, :, 0].flatten(), 'r', t, pred[0, :, 0].flatten(), 'b--')
-        plt.ylabel('output_feature_1')
-        plt.subplot(312)
-        plt.plot(t, angle[0, :, 1].flatten(), 'r', t, pred[0, :, 1].flatten(), 'b--')
-        plt.ylabel('output_feature_2')
-        plt.subplot(313)
-        plt.plot(t, angle[0, :, 2].flatten(), 'r', t, pred[0, :, 2].flatten(), 'b--')
-        plt.ylabel('output_feature_3')
+        t = np.arange(0, conf.MAX_STEPS)
+        # subplot
+        for iF in range(3):
+            ax = plt.subplot(3,1,iF+1)
+            try:
+                ax.lines.remove(lines_pdb[iF][0])
+                ax.lines.remove(lines_pre[iF][0])
+                ax.lines.remove(legd[iF][0])
+            except Exception:
+                pass
+            lines_pdb[iF] = plt.plot(t, angle[0, :, iF].flatten(), 'r', label='pdb')
+            lines_pre[iF] = plt.plot(t, pred[0, :, iF].flatten(), 'b--', label='prediction')
+            legd[iF] = plt.legend(loc='upper right')
+            plt.ylabel('output_feature_%d'%(iF+1))
+            plt.xlim(0, conf.MAX_STEPS)
+            plt.ylim(-4, 4)
         plt.draw()
         plt.pause(0.3)
         # print and write to log
         if i % 20 == 0:
-            print('cost: ', round(cost, 4))
+            ## test model and print
+            accuracy = sess.run(model.accuracy,feed_dict={xs:TestFeature, ys:TestAngle[:,:,indexAngle]})
+            print('cost: %g ; accuracy on tests set: %g'%(cost, accuracy))
+            ## record result into summary
             result = sess.run(merged, feed_dict)
             writer.add_summary(result, i)
-
-    ## test model
-    test_pred = sess.run(model.prediction, feed_dict={xs: TestFeature, ys: TestAngle[:,:,indexAngle]})
-    test_accuracy = np.mean(np.square(TestAngle[:,:,indexAngle] - test_pred), axis=0)
-    print(test_accuracy)
 
 
 #
