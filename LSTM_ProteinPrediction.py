@@ -24,7 +24,7 @@ from Configs import ProteinConfig
 
 def main():
     # index of angles
-    indexAngle = [0,1] # Ramachandran angles
+    indexAngle = [0,1,2] # Ramachandran angles
     # indexAngle = [3,4] # Frenet angles
 
     # create configuration
@@ -94,7 +94,7 @@ def main():
     plt.show()
 
     # total number of epoch
-    num_epoch = 20
+    num_epoch = 1
     # total number of run
     num_run = int(num_epoch*TrainFeature.shape[0]/conf.BATCH_SIZE)
     print("Total number of runs:", num_run)
@@ -117,12 +117,15 @@ def main():
         # plotting
         # some plot index, removable
         t = np.arange((i-1)*conf.MAX_STEPS, i*conf.MAX_STEPS)
-        plt.subplot(211)
+        plt.subplot(311)
         plt.plot(t, angle[0, :, 0].flatten(), 'r', t, pred[0, :, 0].flatten(), 'b--')
         plt.ylabel('output_feature_1')
-        plt.subplot(212)
+        plt.subplot(312)
         plt.plot(t, angle[0, :, 1].flatten(), 'r', t, pred[0, :, 1].flatten(), 'b--')
         plt.ylabel('output_feature_2')
+        plt.subplot(313)
+        plt.plot(t, angle[0, :, 2].flatten(), 'r', t, pred[0, :, 2].flatten(), 'b--')
+        plt.ylabel('output_feature_3')
         plt.draw()
         plt.pause(0.3)
         # print and write to log
