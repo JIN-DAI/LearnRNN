@@ -17,6 +17,8 @@ from Utils import define_scope
 
 # define class for LSTMRNN for variable length sequence
 class LSTMRNN(object):
+    upper_boundary = 0.1
+
     # initializer
     def __init__(self, xs, ys, config):
         # model parameters
@@ -35,6 +37,7 @@ class LSTMRNN(object):
         self.prediction
         self.cost
         self.optimizer
+        self.accuracy
 
     @define_scope
     def prediction(self):
@@ -63,27 +66,38 @@ class LSTMRNN(object):
     # compute cost function by the actual length
     @define_scope
     def cost(self):
-        # compute losses for each step
-        # loss on each step (batch_size, max_steps)
-        losses = tf.reduce_sum(LSTMRNN.ms_error_angular(self.prediction, self.ys), reduction_indices=2)
-        # mask of padding part
-        mask = tf.sign(tf.reduce_max(tf.abs(self.ys), reduction_indices=2))
-        # mean losses of each sequence: average along steps
-        # shape: (batch_size,)
-        losses = tf.div(tf.reduce_sum(losses * mask, reduction_indices=1),
-                        # total loss of each sequence by the actual length
-                        tf.reduce_sum(mask, reduction_indices=1),  # divide with actual length
-                        name='average_losses_per_seq')
+        losses = self.losses_seq()
         # average loses over batch
         cost_mean = tf.reduce_mean(losses, name='average_cost_per_batch')
         # record cost into summary
         tf.summary.scalar('cost_by_length', cost_mean)
         return cost_mean
 
+    # accuracy
+    # compute accuracy by the actual length
+    @define_scope
+    def accuracy(self):
+        # assuming prediction is correct if losses_seq() is smaller than upper error boundary
+        return tf.reduce_mean(tf.cast(self.losses_seq() <= self.upper_boundary, dtype=tf.float32))
+
     # train optimizer
     @define_scope
     def optimizer(self):
         return tf.train.AdamOptimizer(self.learning_rate).minimize(self.cost)
+
+    # losses of each sequence
+    def losses_seq(self):
+        # compute losses for each step
+        # loss on each step (batch_size, max_steps)
+        losses_step = tf.reduce_sum(LSTMRNN.ms_error_angular(self.prediction, self.ys), reduction_indices=2)
+        # mask of padding part
+        mask = tf.sign(tf.reduce_max(tf.abs(self.ys), reduction_indices=2))
+        # mean losses of each sequence: average along steps
+        # shape: (batch_size,)
+        losses = tf.div(tf.reduce_sum(losses_step * mask, reduction_indices=1),  # total loss of each sequence by the actual length
+                        tf.reduce_sum(mask, reduction_indices=1),  # divide with actual length
+                        name='average_losses_per_seq')
+        return losses
 
     # weights: initialized with normal distribution
     def _weight_variable(self, shape, name='weights'):
