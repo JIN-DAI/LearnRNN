@@ -18,8 +18,8 @@ import pickle
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-from RNN_Models import LSTMRNN
-from Configs import ProteinConfig
+from RNN_Models import LSTMRNN, BiLSTMRNN
+from Configs import RamachandranConfig, FrenetConfig
 
 
 def main():
@@ -28,13 +28,14 @@ def main():
         # index of angles
         indexAngle = [0,1,2]
         angleString = ["Phi","Psi","Omega"]
+        # create configuration
+        conf = RamachandranConfig()
     else:
         # Frenet angles
         indexAngle = [3,4]
         angleString = ["Kappa", "Tau"]
-
-    # create configuration
-    conf = ProteinConfig()
+        # create configuration
+        conf = FrenetConfig()
 
     # load data from folder "data"
     srcPathName = r"data"
@@ -79,8 +80,13 @@ def main():
     # placeholder for output: (batch_size, max_steps, output_size)
     ys = tf.placeholder(tf.float32, [None, conf.MAX_STEPS, conf.OUTPUT_SIZE], name='ys')
 
-    # create an instance of LSTMRNN
-    model = LSTMRNN(xs, ys, conf)
+    if False:
+        # create an instance of LSTMRNN
+        model = LSTMRNN(xs, ys, conf)
+    else:
+        # create an instance of BiLSTMRNN
+        model = BiLSTMRNN(xs, ys, conf)
+
 
     # create a session
     sess = tf.Session()
@@ -98,9 +104,9 @@ def main():
     # open figure to plot
     plt.ion()
     plt.show()
-    lines_pdb = [None]*3
-    lines_pre = [None]*3
-    legd = [None]*3
+    lines_pdb = [None]*len(indexAngle)
+    lines_pre = [None]*len(indexAngle)
+    legd = [None]*len(indexAngle)
 
     # total number of epoch
     num_epoch = 1
@@ -127,8 +133,8 @@ def main():
         # some plot index, removable
         t = np.arange(0, conf.MAX_STEPS)
         # subplot
-        for iF in range(3):
-            ax = plt.subplot(3,1,iF+1)
+        for iF in range(len(indexAngle)):
+            ax = plt.subplot(len(indexAngle),1,iF+1)
             try:
                 ax.lines.remove(lines_pdb[iF][0])
                 ax.lines.remove(lines_pre[iF][0])
@@ -142,12 +148,12 @@ def main():
             plt.xlim(0, conf.MAX_STEPS)
             plt.ylim(-4, 4)
         plt.draw()
-        plt.pause(0.3)
+        plt.pause(0.1)
         # print and write to log
         if i % 20 == 0:
             ## test model and print
             accuracy = sess.run(model.accuracy,feed_dict={xs:TestFeature, ys:TestAngle[:,:,indexAngle]})
-            print('cost: %g ; accuracy on tests set: %g'%(cost, accuracy))
+            print('cost on training set: %7g ; accuracy on testing set: %7g'%(cost, accuracy))
             ## record result into summary
             result = sess.run(merged, feed_dict)
             writer.add_summary(result, i)
