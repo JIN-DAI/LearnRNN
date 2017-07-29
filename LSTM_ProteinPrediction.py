@@ -15,6 +15,7 @@
 #%% import modules
 import os
 import pickle
+import time
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -23,7 +24,7 @@ from Configs import RamachandranConfig, FrenetConfig
 
 
 def main():
-    if True:
+    if False:
         # Ramachandran angles
         # index of angles
         indexAngle = [0,1,2]
@@ -87,7 +88,6 @@ def main():
         # create an instance of BiLSTMRNN
         model = BiLSTMRNN(xs, ys, conf)
 
-
     # create a session
     sess = tf.Session()
 
@@ -111,10 +111,11 @@ def main():
     # total number of epoch
     num_epoch = 1
     # total number of run
-    num_run = int(num_epoch*TrainFeature.shape[0]/conf.BATCH_SIZE)
+    num_run = num_epoch*TrainFeature.shape[0]//conf.BATCH_SIZE
     print("Total number of runs:", num_run)
 
     for i in range(num_run):
+        start_time = time.time()
         # obtain one batch
         feature = TrainFeature[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,:]
         angle = TrainAngle[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,indexAngle]
@@ -128,6 +129,8 @@ def main():
 
         # run one step of training
         _, cost, pred = sess.run([model.optimizer, model.cost, model.prediction], feed_dict=feed_dict)
+
+        duration = time.time() - start_time
 
         # plotting
         # some plot index, removable
@@ -149,14 +152,17 @@ def main():
             plt.ylim(-4, 4)
         plt.draw()
         plt.pause(0.1)
+
         # print and write to log
         if i % 20 == 0:
             ## test model and print
             accuracy = sess.run(model.accuracy,feed_dict={xs:TestFeature, ys:TestAngle[:,:,indexAngle]})
-            print('cost on training set: %7g ; accuracy on testing set: %7g'%(cost, accuracy))
+            print('Step% 4d(%.3f sec): cost = %.4f; accuracy = %.4f' % (i, duration, cost, accuracy))
             ## record result into summary
             result = sess.run(merged, feed_dict)
             writer.add_summary(result, i)
+
+    sess.close()
 
 
 #
