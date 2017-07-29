@@ -17,9 +17,6 @@ from Utils import define_scope
 
 # define class for LSTMRNN for variable length sequence
 class LSTMRNN(object):
-    # upper error boundary of sum of angle differences in each chain
-    upper_boundary = 0.5
-
     # initializer
     def __init__(self, xs, ys, config):
         # model parameters
@@ -40,6 +37,7 @@ class LSTMRNN(object):
         self.optimizer
         self.accuracy
 
+    # prediction with basic LSTM RNN
     @define_scope
     def prediction(self):
         # ------------------------------------------------------
@@ -78,9 +76,15 @@ class LSTMRNN(object):
     # compute accuracy by the actual length
     @define_scope
     def accuracy(self):
+        losses = self.losses_seq()
+        # upper error boundary of sum of angle differences in each chain
+        #upper_boundary = 0.5
         # assuming prediction is correct if losses_seq() is smaller than upper error boundary
-        #return tf.reduce_mean(tf.cast(self.losses_seq() <= self.upper_boundary, dtype=tf.float32))
-        return tf.reduce_mean(self.losses_seq()) # simplification of accuracy
+        #accuracy_mean = tf.reduce_mean(tf.cast(losses <= self.upper_boundary, dtype=tf.float32))
+        accuracy_mean = tf.reduce_mean(losses) # simplification of accuracy
+        # record cost into summary
+        tf.summary.scalar('accuracy_by_length', accuracy_mean)
+        return accuracy_mean
 
     # train optimizer
     @define_scope
@@ -131,3 +135,40 @@ class LSTMRNN(object):
         length = tf.reduce_sum(used, reduction_indices=1)  # sum along time axis
         length = tf.cast(length, tf.int32)  # data type -> int32
         return length
+
+# ==============================================================================
+# define class for BiLSTMRNN for variable length sequence
+class BiLSTMRNN(LSTMRNN):
+    # initializer
+    def __init__(self, xs, ys, config):
+        LSTMRNN.__init__(self, xs, ys, config)
+
+    # prediction with bidirectional LSTM RNN
+    @define_scope
+    def prediction(self):
+        # ------------------------------------------------------
+        # create forward and backward basic LSTM cell --> http://arxiv.org/abs/1409.2329
+        lstm_fw = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
+        lstm_bw = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
+
+        # initial zero state for LSTM
+        #cell_init_state_fw = lstm_fw.zero_state(tf.shape(self.xs)[0], dtype=tf.float32)
+        #cell_init_state_bw = lstm_bw.zero_state(tf.shape(self.xs)[0], dtype=tf.float32)
+
+        # creates a recurrent neural network specified by RNNCell --> https://www.tensorflow.org/api_docs/python/tf/nn/dynamic_rnn
+        cell_outputs, cell_final_state = tf.nn.bidirectional_dynamic_rnn(
+            lstm_fw, lstm_bw, self.xs, time_major=False, dtype=tf.float32, sequence_length=LSTMRNN.length(self.xs))
+        cell_outputs = tf.concat(cell_outputs, 2)
+        # ------------------------------------------------------
+        # (batch_size, max_steps, cell_size) ==> (batch_size*max_steps, cell_size)
+        l_out_x = tf.reshape(cell_outputs, [-1, self.cell_size+self.cell_size], name='2_2D')
+        # Ws (cell_size, out_size)
+        Ws_out = self._weight_variable([self.cell_size+self.cell_size, self.output_size])
+        # bs (out_size,)
+        bs_out = self._bias_variable([self.output_size, ])
+        # (batch*max_steps, out_size)
+        pred_2D = tf.matmul(l_out_x, Ws_out) + bs_out
+        # reshape prediction value to (batch_size, max_steps, out_size)
+        pred_3D = tf.reshape(pred_2D, [-1, self.max_steps, self.output_size],
+                             name='pred_3D')
+        return pred_3D
