@@ -15,22 +15,26 @@ import tensorflow as tf
 from Utils import define_scope
 
 
-# define class for LSTMRNN for variable length sequence
+# define class for unidirectional LSTMRNN for variable length sequence
 class LSTMRNN(object):
     # initializer
-    def __init__(self, xs, ys, config):
+    def __init__(self, xs, ys, dropout, config):
+        # hyper parameters
+        self.learning_rate = config.LR
         # model parameters
         self.max_steps = config.MAX_STEPS
         self.input_size = config.INPUT_SIZE
         self.output_size = config.OUTPUT_SIZE
         self.cell_size = config.CELL_SIZE
-        self.learning_rate = config.LR
+        self.num_layers = config.NUM_LAYERS
         # model interfaces for inputs
         with tf.name_scope('inputs'):
             # placeholder for input: (batch_size, max_steps, input_size)
             self.xs = xs
             # placeholder for output: (batch_size, max_steps, output_size)
             self.ys = ys
+            # placeholder for dropout
+            self.dropout = dropout
         # model behaviors
         self.prediction
         self.cost
@@ -42,12 +46,19 @@ class LSTMRNN(object):
     def prediction(self):
         # ------------------------------------------------------
         # create basic LSTM cell --> http://arxiv.org/abs/1409.2329
-        lstm_cell = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
+        #cell = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
+        # create multiple layers of basic LSTM cell --> https://danijar.com/introduction-to-recurrent-networks-in-tensorflow/
+        cells = []
+        for _ in range(self.num_layers):
+            cell = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
+            cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=1.0-self.dropout)
+            cells.append(cell)
+        cell = tf.contrib.rnn.MultiRNNCell(cells)
         # initial zero state for LSTM
-        cell_init_state = lstm_cell.zero_state(tf.shape(self.xs)[0], dtype=tf.float32)
+        cell_init_state = cell.zero_state(tf.shape(self.xs)[0], dtype=tf.float32)
         # creates a recurrent neural network specified by RNNCell --> https://www.tensorflow.org/api_docs/python/tf/nn/dynamic_rnn
         cell_outputs, cell_final_state = tf.nn.dynamic_rnn(
-            lstm_cell, self.xs, initial_state=cell_init_state, time_major=False, sequence_length=LSTMRNN.length(self.xs))
+            cell, self.xs, initial_state=cell_init_state, time_major=False, sequence_length=LSTMRNN.length(self.xs))
         # ------------------------------------------------------
         # (batch_size, max_steps, cell_size) ==> (batch_size*max_steps, cell_size)
         l_out_x = tf.reshape(cell_outputs, [-1, self.cell_size], name='2_2D')
@@ -137,19 +148,24 @@ class LSTMRNN(object):
         return length
 
 # ==============================================================================
-# define class for BiLSTMRNN for variable length sequence
+# define class for bidirectional LSTMRNN for variable length sequence
 class BiLSTMRNN(LSTMRNN):
     # initializer
-    def __init__(self, xs, ys, config):
-        LSTMRNN.__init__(self, xs, ys, config)
+    def __init__(self, xs, ys, dropout, config):
+        LSTMRNN.__init__(self, xs, ys, dropout, config)
 
     # prediction with bidirectional LSTM RNN
     @define_scope
     def prediction(self):
         # ------------------------------------------------------
         # create forward and backward basic LSTM cell --> http://arxiv.org/abs/1409.2329
-        lstm_fw = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
-        lstm_bw = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
+        #cell_fw = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
+        #cell_bw = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
+        # create multiple layers of forward and backward basic LSTM cell --> https://danijar.com/introduction-to-recurrent-networks-in-tensorflow/
+        cell = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
+        cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=1.0 - self.dropout)
+        cell_fw = tf.contrib.rnn.MultiRNNCell([cell]*self.num_layers)
+        cell_bw = tf.contrib.rnn.MultiRNNCell([cell]*self.num_layers)
 
         # initial zero state for LSTM
         #cell_init_state_fw = lstm_fw.zero_state(tf.shape(self.xs)[0], dtype=tf.float32)
@@ -157,7 +173,7 @@ class BiLSTMRNN(LSTMRNN):
 
         # creates a recurrent neural network specified by RNNCell --> https://www.tensorflow.org/api_docs/python/tf/nn/dynamic_rnn
         cell_outputs, cell_final_state = tf.nn.bidirectional_dynamic_rnn(
-            lstm_fw, lstm_bw, self.xs, time_major=False, dtype=tf.float32, sequence_length=LSTMRNN.length(self.xs))
+            cell_fw, cell_bw, self.xs, time_major=False, dtype=tf.float32, sequence_length=LSTMRNN.length(self.xs))
         cell_outputs = tf.concat(cell_outputs, 2)
         # ------------------------------------------------------
         # (batch_size, max_steps, cell_size) ==> (batch_size*max_steps, cell_size)
@@ -169,6 +185,5 @@ class BiLSTMRNN(LSTMRNN):
         # (batch*max_steps, out_size)
         pred_2D = tf.matmul(l_out_x, Ws_out) + bs_out
         # reshape prediction value to (batch_size, max_steps, out_size)
-        pred_3D = tf.reshape(pred_2D, [-1, self.max_steps, self.output_size],
-                             name='pred_3D')
+        pred_3D = tf.reshape(pred_2D, [-1, self.max_steps, self.output_size], name='pred_3D')
         return pred_3D
