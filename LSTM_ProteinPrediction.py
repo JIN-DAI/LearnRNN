@@ -43,11 +43,30 @@ def main():
     srcFileTrain = os.path.join(srcPathName, r"train.dat")
     srcFileTest = os.path.join(srcPathName, r"test.dat")
     with open(srcFileTrain, 'rb') as fr:
-        featuresTrain = pickle.load(fr)
-        anglesTrain = pickle.load(fr)
+        featuresTrainAll = pickle.load(fr)
+        anglesTrainAll = pickle.load(fr)
     with open(srcFileTest, 'rb') as fr:
-        featuresTest = pickle.load(fr)
-        anglesTest = pickle.load(fr)
+        featuresTestAll = pickle.load(fr)
+        anglesTestAll = pickle.load(fr)
+
+    # screen data with MAX_STEPS
+    # train data
+    featuresTrain = []
+    anglesTrain = []
+    for idx in range(len(featuresTrainAll)):
+        if len(featuresTrainAll[idx]) <= conf.MAX_STEPS and len(anglesTrainAll[idx]) <= conf.MAX_STEPS:
+            featuresTrain.append(featuresTrainAll[idx])
+            anglesTrain.append(anglesTrainAll[idx])
+    print("Number of feature-angle pairs in train set: (%d, %d)" % (len(featuresTrain), len(anglesTrain)))
+    # test data
+    featuresTest = []
+    anglesTest = []
+    for idx in range(len(featuresTestAll)):
+        if len(featuresTestAll[idx]) <= conf.MAX_STEPS and len(anglesTestAll[idx]) <= conf.MAX_STEPS:
+            featuresTest.append(featuresTestAll[idx])
+            anglesTest.append(anglesTestAll[idx])
+    print("Number of feature-angle pairs in test set: (%d, %d)" % (len(featuresTest), len(anglesTest)))
+
 
     # padding zeros for training data
     for i in range(len(featuresTrain)):
@@ -109,10 +128,14 @@ def main():
     legd = [None]*len(indexAngle)
 
     # total number of epoch
-    num_epoch = 1
+    num_epoch = 2
+    epoch_counter = 0
     # total number of run
     num_run = num_epoch*TrainFeature.shape[0]//conf.BATCH_SIZE
     print("Total number of runs:", num_run)
+
+    # run number to print
+    num_print = 20
 
     for i in range(num_run):
         start_time = time.time()
@@ -123,6 +146,9 @@ def main():
         BATCH_START += conf.BATCH_SIZE
         if BATCH_START >= TrainFeature.shape[0]:
             BATCH_START = 0
+        if BATCH_START == 0:
+            epoch_counter += 1
+            print('Epoch: %d' % epoch_counter)
 
         # create the feed_dict
         feed_dict = {xs:feature, ys:angle}
@@ -154,8 +180,8 @@ def main():
         plt.pause(0.1)
 
         # print and write to log
-        if i % 20 == 0:
-            ## test model and print
+        if i % num_print == 0 or i == num_run:
+            ## validate model and print
             accuracy = sess.run(model.accuracy,feed_dict={xs:TestFeature, ys:TestAngle[:,:,indexAngle]})
             print('Step% 4d(%.3f sec): cost = %.4f; accuracy = %.4f' % (i, duration, cost, accuracy))
             ## record result into summary
