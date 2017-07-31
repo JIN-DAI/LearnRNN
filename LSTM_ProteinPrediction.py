@@ -21,6 +21,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from RNN_Models import LSTMRNN, BiLSTMRNN
 from Configs import RamachandranConfig, FrenetConfig
+from Utils import Mod2Interval
 
 
 def main():
@@ -91,8 +92,6 @@ def main():
     TestFeature = np.array(featuresTest)
     TestAngle = np.array(anglesTest)
 
-    # variable to record start index of batch
-    BATCH_START = 0
 
     # placeholder for input: (batch_size, max_steps, input_size)
     xs = tf.placeholder(tf.float32, [None, conf.MAX_STEPS, conf.INPUT_SIZE], name='xs')
@@ -109,6 +108,10 @@ def main():
     # create a session
     sess = tf.Session()
 
+    # initialze all variables
+    init = tf.global_variables_initializer()
+    sess.run(init)
+
     # create an instance of Saver
     saver = tf.train.Saver()
     ckpt = tf.train.get_checkpoint_state(conf.checkpoint_dir)
@@ -116,15 +119,12 @@ def main():
         saver.restore(sess, ckpt.model_checkpoint_path)
         print("Checkpoint found! Resume training ...")
 
+
     # for tensorboard
     merged = tf.summary.merge_all()
     writer = tf.summary.FileWriter("logs_LSTM", sess.graph)
     # to see the graph in command line window, then type:
     #   python -m tensorflow.tensorboard --logdir=logs_Regression
-
-    # initialze all variables
-    init = tf.global_variables_initializer()
-    sess.run(init)
 
     # open figure to plot
     plt.ion()
@@ -133,12 +133,15 @@ def main():
     lines_pre = [None]*len(indexAngle)
     legd = [None]*len(indexAngle)
 
+    # variable to record start index of batch
+    BATCH_START = 0
+
     # total number of epoch
     num_epoch = 2
     epoch_counter = 0
     # total number of run
     num_run = num_epoch*TrainFeature.shape[0]//conf.BATCH_SIZE
-    print("Total number of runs:", num_run)
+    print("Total number of runs: % 4d (%d epoches)" % (num_run, num_epoch))
 
     # run number to print
     num_print = 20
@@ -146,24 +149,38 @@ def main():
     num_checkpoint = 100
 
     for i in range(num_run):
-        start_time = time.time()
-        # obtain one batch
-        feature = TrainFeature[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,:]
-        angle = TrainAngle[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,indexAngle]
-        # increase the start of batch by conf.BATCH_SIZE
-        BATCH_START += conf.BATCH_SIZE
-        if BATCH_START >= TrainFeature.shape[0]:
-            BATCH_START = 0
+        # print number of epoch
         if BATCH_START == 0:
             epoch_counter += 1
             print('Epoch: %d' % epoch_counter)
 
+        # obtain one batch
+        feature = TrainFeature[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,:]
+        angle = TrainAngle[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,indexAngle]
+
+        # increase the start of batch by conf.BATCH_SIZE
+        BATCH_START += conf.BATCH_SIZE
+        if BATCH_START >= TrainFeature.shape[0]:
+            BATCH_START = 0
+
         # create the feed_dict
         feed_dict = {xs:feature, ys:angle}
 
+        # print and write to log of initial step
+        if i == 0:
+            # validate model and print
+            cost, accuracy = sess.run([model.cost, model.accuracy],
+                                      feed_dict={xs: TestFeature, ys: TestAngle[:, :, indexAngle]})
+            print('Initial Step: cost = %.4f; accuracy = %.4f' % (cost, accuracy))
+            # record result into summary
+            result = sess.run(merged, feed_dict)
+            writer.add_summary(result, i)
+
+        # record start time
+        start_time = time.time()
         # run one step of training
         _, cost, pred = sess.run([model.optimizer, model.cost, model.prediction], feed_dict=feed_dict)
-
+        # calculate time duration of training step
         duration = time.time() - start_time
 
         # plotting
@@ -172,32 +189,43 @@ def main():
         # subplot
         for iF in range(len(indexAngle)):
             ax = plt.subplot(len(indexAngle),1,iF+1)
+            # remove previous curve
             try:
                 ax.lines.remove(lines_pdb[iF][0])
                 ax.lines.remove(lines_pre[iF][0])
                 ax.lines.remove(legd[iF][0])
             except Exception:
                 pass
-            lines_pdb[iF] = plt.plot(t, angle[0, :, iF].flatten(), 'r', label='pdb')
-            lines_pre[iF] = plt.plot(t, pred[0, :, iF].flatten(), 'b--', label='prediction')
+            # current angle values
+            y_pdb = angle[0, :, iF]
+            y_pred = pred[0, :, iF].flatten()
+            # modulate angles values into (-pi, pi]
+            for iV in range(len(y_pdb)):
+                y_pdb[iV] = Mod2Interval(y_pdb[iV], np.pi)
+                y_pred[iV] = Mod2Interval(y_pred[iV], np.pi)
+            # plot angles curves
+            lines_pdb[iF] = plt.plot(t, y_pdb, 'r', label='pdb')
+            lines_pre[iF] = plt.plot(t, y_pred, 'b--', label='prediction')
             legd[iF] = plt.legend(loc='upper right')
             plt.ylabel(angleString[iF])
             plt.xlim(0, conf.MAX_STEPS)
-            plt.ylim(-4, 4)
+            plt.ylim(-3.5, 3.5)
+        # draw figure and keep for a while
         plt.draw()
         plt.pause(0.1)
 
-        # print and write to log
-        if i % num_print == 0 or i == num_run:
-            ## validate model and print
+        # print and write to log after training
+        if (i+1) % num_print == 0:
+            # validate model and print
             accuracy = sess.run(model.accuracy,feed_dict={xs:TestFeature, ys:TestAngle[:,:,indexAngle]})
-            print('Step% 4d(%.3f sec): cost = %.4f; accuracy = %.4f' % (i, duration, cost, accuracy))
-            ## record result into summary
+            print('Step% 4d(%.3f sec): cost = %.4f; accuracy = %.4f' % (i+1, duration, cost, accuracy))
+            # record result into summary
             result = sess.run(merged, feed_dict)
-            writer.add_summary(result, i)
+            writer.add_summary(result, i+1)
         # save checkpoint
-        if i % num_checkpoint == 0:
+        if (i+1) % num_checkpoint == 0:
             save_path = saver.save(sess, conf.checkpoint_dir+r"model.ckpt")
+            print("Checkpoint saved at step% 4d!" % (i+1))
 
     sess.close()
 
