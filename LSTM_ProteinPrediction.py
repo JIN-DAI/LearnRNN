@@ -67,7 +67,6 @@ def main():
             anglesTest.append(anglesTestAll[idx])
     print("Number of feature-angle pairs in test set: (%d, %d)" % (len(featuresTest), len(anglesTest)))
 
-
     # padding zeros for training data
     for i in range(len(featuresTrain)):
         # features of training
@@ -110,6 +109,13 @@ def main():
     # create a session
     sess = tf.Session()
 
+    # create an instance of Saver
+    saver = tf.train.Saver()
+    ckpt = tf.train.get_checkpoint_state(conf.checkpoint_dir)
+    if ckpt and ckpt.model_checkpoint_path:
+        saver.restore(sess, ckpt.model_checkpoint_path)
+        print("Checkpoint found! Resume training ...")
+
     # for tensorboard
     merged = tf.summary.merge_all()
     writer = tf.summary.FileWriter("logs_LSTM", sess.graph)
@@ -136,6 +142,8 @@ def main():
 
     # run number to print
     num_print = 20
+    # run number to save
+    num_checkpoint = 100
 
     for i in range(num_run):
         start_time = time.time()
@@ -187,6 +195,9 @@ def main():
             ## record result into summary
             result = sess.run(merged, feed_dict)
             writer.add_summary(result, i)
+        # save checkpoint
+        if i % num_checkpoint == 0:
+            save_path = saver.save(sess, conf.checkpoint_dir+r"model.ckpt")
 
     sess.close()
 
