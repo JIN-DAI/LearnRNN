@@ -37,3 +37,11 @@ def define_scope(function, scope=None, *args, **kwargs):
                 setattr(self, attribute, function(self))
         return getattr(self, attribute)
     return decorator
+
+
+# modulate x into interval: (-Interval, Interval]
+def Mod2Interval(x, Interval):
+    rem = x%(2*Interval)
+    if rem > Interval:
+        rem = rem - 2*Interval
+    return rem
