@@ -33,6 +33,8 @@ class RamachandranConfig:
         self.INPUT_SIZE = 25   # number of features for input, such as MSA information ...
         self.OUTPUT_SIZE = 3  # number of labels for output, such as Ramachandran angles ...
         self.CELL_SIZE = 32   # size of cell
+        self.NUM_LAYERS = 3  # number of LSTM layers
+        self.checkpoint_dir = "./result/"
 
 
 class FrenetConfig:
@@ -45,3 +47,5 @@ class FrenetConfig:
         self.INPUT_SIZE = 25   # number of features for input, such as MSA information ...
         self.OUTPUT_SIZE = 2  # number of labels for output, such as Ramachandran angles ...
         self.CELL_SIZE = 32   # size of cell
+        self.NUM_LAYERS = 3  # number of LSTM layers
+        self.checkpoint_dir = "./result/"
