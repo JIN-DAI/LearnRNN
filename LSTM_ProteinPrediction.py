@@ -97,13 +97,15 @@ def main():
     xs = tf.placeholder(tf.float32, [None, conf.MAX_STEPS, conf.INPUT_SIZE], name='xs')
     # placeholder for output: (batch_size, max_steps, output_size)
     ys = tf.placeholder(tf.float32, [None, conf.MAX_STEPS, conf.OUTPUT_SIZE], name='ys')
+    # placeholder for dropout
+    dropout = tf.placeholder(tf.float32)
 
-    if False:
+    if True:
         # create an instance of LSTMRNN
-        model = LSTMRNN(xs, ys, conf)
+        model = LSTMRNN(xs, ys, dropout, conf)
     else:
         # create an instance of BiLSTMRNN
-        model = BiLSTMRNN(xs, ys, conf)
+        model = BiLSTMRNN(xs, ys, dropout, conf)
 
     # create a session
     sess = tf.Session()
@@ -149,32 +151,33 @@ def main():
     num_checkpoint = 100
 
     for i in range(num_run):
-        # print number of epoch
-        if BATCH_START == 0:
-            epoch_counter += 1
-            print('Epoch: %d' % epoch_counter)
-
         # obtain one batch
         feature = TrainFeature[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,:]
         angle = TrainAngle[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,indexAngle]
 
-        # increase the start of batch by conf.BATCH_SIZE
-        BATCH_START += conf.BATCH_SIZE
-        if BATCH_START >= TrainFeature.shape[0]:
-            BATCH_START = 0
-
         # create the feed_dict
-        feed_dict = {xs:feature, ys:angle}
+        feed_dict = {xs: feature, ys: angle, dropout: 0.5}
 
         # print and write to log of initial step
         if i == 0:
             # validate model and print
-            cost, accuracy = sess.run([model.cost, model.accuracy],
-                                      feed_dict={xs: TestFeature, ys: TestAngle[:, :, indexAngle]})
-            print('Initial Step: cost = %.4f; accuracy = %.4f' % (cost, accuracy))
+            accTrain = sess.run(model.accuracy,
+                                feed_dict={xs: TrainFeature, ys: TrainAngle[:, :, indexAngle], dropout: 0.0})
+            accTest = sess.run(model.accuracy,
+                               feed_dict={xs: TestFeature, ys: TestAngle[:, :, indexAngle], dropout: 0.0})
+            print('Initial Step: accTrain = %.4f; accTest = %.4f' % (accTrain, accTest))
             # record result into summary
             result = sess.run(merged, feed_dict)
             writer.add_summary(result, i)
+
+        # print number of epoch
+        if BATCH_START == 0:
+            epoch_counter += 1
+            print('Epoch: %d' % epoch_counter)
+        # increase the start of batch by conf.BATCH_SIZE
+        BATCH_START += conf.BATCH_SIZE
+        if BATCH_START >= TrainFeature.shape[0]:
+            BATCH_START = 0
 
         # record start time
         start_time = time.time()
@@ -217,8 +220,12 @@ def main():
         # print and write to log after training
         if (i+1) % num_print == 0:
             # validate model and print
-            accuracy = sess.run(model.accuracy,feed_dict={xs:TestFeature, ys:TestAngle[:,:,indexAngle]})
-            print('Step% 4d(%.3f sec): cost = %.4f; accuracy = %.4f' % (i+1, duration, cost, accuracy))
+            accTrain = sess.run(model.accuracy,
+                                feed_dict={xs: TrainFeature, ys: TrainAngle[:, :, indexAngle], dropout: 0.0})
+            accTest = sess.run(model.accuracy,
+                               feed_dict={xs: TestFeature, ys: TestAngle[:, :, indexAngle], dropout: 0.0})
+            print('Step% 4d(%.3f sec): cost = %.4f; accTrain = %.4f; accTest = %.4f'
+                  % (i+1, duration, cost, accTrain, accTest))
             # record result into summary
             result = sess.run(merged, feed_dict)
             writer.add_summary(result, i+1)
