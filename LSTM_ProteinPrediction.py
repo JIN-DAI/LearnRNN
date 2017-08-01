@@ -25,7 +25,7 @@ from Utils import Mod2Interval
 
 
 def main():
-    if False:
+    if True:
         # Ramachandran angles
         # index of angles
         indexAngle = [0,1,2]
@@ -100,7 +100,7 @@ def main():
     # placeholder for dropout
     dropout = tf.placeholder(tf.float32)
 
-    if True:
+    if False:
         # create an instance of LSTMRNN
         model = LSTMRNN(xs, ys, dropout, conf)
     else:
@@ -117,9 +117,13 @@ def main():
     # create an instance of Saver
     saver = tf.train.Saver()
     ckpt = tf.train.get_checkpoint_state(conf.checkpoint_dir)
+    print("Checking %s ..." % (conf.checkpoint_dir))
     if ckpt and ckpt.model_checkpoint_path:
         saver.restore(sess, ckpt.model_checkpoint_path)
         print("Checkpoint found! Resume training ...")
+    else:
+        print("Checkpoint NOT found! Start training ...")
+    #print(conf)
 
 
     # for tensorboard
@@ -150,21 +154,25 @@ def main():
     # run number to save
     num_checkpoint = 100
 
+    # dropout value
+    dropout_train = 0.5
+    dropout_test = 0.0
+
     for i in range(num_run):
         # obtain one batch
         feature = TrainFeature[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,:]
         angle = TrainAngle[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,indexAngle]
 
         # create the feed_dict
-        feed_dict = {xs: feature, ys: angle, dropout: 0.5}
+        feed_dict = {xs: feature, ys: angle, dropout: dropout_train}
 
         # print and write to log of initial step
         if i == 0:
             # validate model and print
             accTrain = sess.run(model.accuracy,
-                                feed_dict={xs: TrainFeature, ys: TrainAngle[:, :, indexAngle], dropout: 0.0})
+                                feed_dict={xs: TrainFeature, ys: TrainAngle[:, :, indexAngle], dropout: dropout_test})
             accTest = sess.run(model.accuracy,
-                               feed_dict={xs: TestFeature, ys: TestAngle[:, :, indexAngle], dropout: 0.0})
+                               feed_dict={xs: TestFeature, ys: TestAngle[:, :, indexAngle], dropout: dropout_test})
             print('Initial Step: accTrain = %.4f; accTest = %.4f' % (accTrain, accTest))
             # record result into summary
             result = sess.run(merged, feed_dict)
@@ -221,9 +229,9 @@ def main():
         if (i+1) % num_print == 0:
             # validate model and print
             accTrain = sess.run(model.accuracy,
-                                feed_dict={xs: TrainFeature, ys: TrainAngle[:, :, indexAngle], dropout: 0.0})
+                                feed_dict={xs: TrainFeature, ys: TrainAngle[:, :, indexAngle], dropout: dropout_test})
             accTest = sess.run(model.accuracy,
-                               feed_dict={xs: TestFeature, ys: TestAngle[:, :, indexAngle], dropout: 0.0})
+                               feed_dict={xs: TestFeature, ys: TestAngle[:, :, indexAngle], dropout: dropout_test})
             print('Step% 4d(%.3f sec): cost = %.4f; accTrain = %.4f; accTest = %.4f'
                   % (i+1, duration, cost, accTrain, accTest))
             # record result into summary
