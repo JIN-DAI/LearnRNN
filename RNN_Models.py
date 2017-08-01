@@ -161,11 +161,23 @@ class BiLSTMRNN(LSTMRNN):
         # create forward and backward basic LSTM cell --> http://arxiv.org/abs/1409.2329
         #cell_fw = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
         #cell_bw = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
+
         # create multiple layers of forward and backward basic LSTM cell --> https://danijar.com/introduction-to-recurrent-networks-in-tensorflow/
-        cell = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
-        cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=1.0 - self.dropout)
-        cell_fw = tf.contrib.rnn.MultiRNNCell([cell]*self.num_layers)
-        cell_bw = tf.contrib.rnn.MultiRNNCell([cell]*self.num_layers)
+        #cell = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
+        #cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=1.0 - self.dropout)
+        #cell_fw = tf.contrib.rnn.MultiRNNCell([cell]*self.num_layers)
+        #cell_bw = tf.contrib.rnn.MultiRNNCell([cell]*self.num_layers)
+        cells_fw = []
+        cells_bw = []
+        for _ in range(self.num_layers):
+            cell_fw = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
+            cell_fw = tf.contrib.rnn.DropoutWrapper(cell_fw, output_keep_prob=1.0 - self.dropout)
+            cells_fw.append(cell_fw)
+            cell_bw = tf.contrib.rnn.BasicLSTMCell(self.cell_size, forget_bias=1.0, state_is_tuple=True)
+            cell_bw = tf.contrib.rnn.DropoutWrapper(cell_bw, output_keep_prob=1.0 - self.dropout)
+            cells_bw.append(cell_bw)
+        cell_fw = tf.contrib.rnn.MultiRNNCell(cells_fw)
+        cell_bw = tf.contrib.rnn.MultiRNNCell(cells_bw)
 
         # initial zero state for LSTM
         #cell_init_state_fw = lstm_fw.zero_state(tf.shape(self.xs)[0], dtype=tf.float32)
