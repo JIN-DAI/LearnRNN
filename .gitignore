@@ -17,4 +17,4 @@ deploy_key_rsa
 .idea
 logs_LSTM
 data
-result
+result*
