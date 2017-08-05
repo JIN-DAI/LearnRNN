@@ -155,7 +155,7 @@ def main():
     num_checkpoint = 100
 
     # dropout value
-    dropout_train = 0.5
+    dropout_train = 0.1
     dropout_test = 0.0
 
     for i in range(num_run):
@@ -211,9 +211,9 @@ def main():
             y_pdb = angle[0, :, iF]
             y_pred = pred[0, :, iF].flatten()
             # modulate angles values into (-pi, pi]
-            for iV in range(len(y_pdb)):
-                y_pdb[iV] = Mod2Interval(y_pdb[iV], np.pi)
-                y_pred[iV] = Mod2Interval(y_pred[iV], np.pi)
+            #for iV in range(len(y_pdb)):
+            #    y_pdb[iV] = Mod2Interval(y_pdb[iV], np.pi)
+            #    y_pred[iV] = Mod2Interval(y_pred[iV], np.pi)
             # plot angles curves
             lines_pdb[iF] = plt.plot(t, y_pdb, 'r', label='pdb')
             lines_pre[iF] = plt.plot(t, y_pred, 'b--', label='prediction')
