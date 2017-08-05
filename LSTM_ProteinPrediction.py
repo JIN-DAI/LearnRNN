@@ -16,6 +16,7 @@
 import os
 import pickle
 import time
+import random
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -159,6 +160,30 @@ def main():
     dropout_test = 0.0
 
     for i in range(num_run):
+        # operation for new epoch
+        if BATCH_START == 0:
+            # print number of epoch
+            epoch_counter += 1
+            print('Epoch: %d' % epoch_counter)
+            # shuffle train set
+            newTrainFeature = []
+            newTrainAngle = []
+            newIdx = np.arange(0, TrainFeature.shape[0])
+            random.shuffle(newIdx)
+            for idx in newIdx:
+                newTrainFeature.append(TrainFeature[idx])
+                newTrainAngle.append(TrainAngle[idx])
+            TrainFeature = np.array(newTrainFeature)
+            TrainAngle = np.array(newTrainAngle)
+            print('Train set has been shuffled!')
+            # validate model and print
+            accTrain = sess.run(model.accuracy,
+                                feed_dict={xs: TrainFeature, ys: TrainAngle[:, :, indexAngle], dropout: dropout_test})
+            accTest = sess.run(model.accuracy,
+                               feed_dict={xs: TestFeature, ys: TestAngle[:, :, indexAngle], dropout: dropout_test})
+            # print accuracy of initial step
+            print('Initial Step before new epoch: accTrain = %.4f; accTest = %.4f' % (accTrain, accTest))
+
         # obtain one batch
         feature = TrainFeature[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,:]
         angle = TrainAngle[BATCH_START:BATCH_START+conf.BATCH_SIZE,:,indexAngle]
@@ -166,22 +191,6 @@ def main():
         # create the feed_dict
         feed_dict = {xs: feature, ys: angle, dropout: dropout_train}
 
-        # print and write to log of initial step
-        if i == 0:
-            # validate model and print
-            accTrain = sess.run(model.accuracy,
-                                feed_dict={xs: TrainFeature, ys: TrainAngle[:, :, indexAngle], dropout: dropout_test})
-            accTest = sess.run(model.accuracy,
-                               feed_dict={xs: TestFeature, ys: TestAngle[:, :, indexAngle], dropout: dropout_test})
-            print('Initial Step: accTrain = %.4f; accTest = %.4f' % (accTrain, accTest))
-            # record result into summary
-            result = sess.run(merged, feed_dict)
-            writer.add_summary(result, i)
-
-        # print number of epoch
-        if BATCH_START == 0:
-            epoch_counter += 1
-            print('Epoch: %d' % epoch_counter)
         # increase the start of batch by conf.BATCH_SIZE
         BATCH_START += conf.BATCH_SIZE
         if BATCH_START >= TrainFeature.shape[0]:
