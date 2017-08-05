@@ -12,6 +12,7 @@
 """
 
 import tensorflow as tf
+import numpy as np
 from Utils import define_scope
 
 
@@ -67,7 +68,7 @@ class LSTMRNN(object):
         # bs (out_size,)
         bs_out = self._bias_variable([self.output_size, ])
         # (batch*max_steps, out_size)
-        pred_2D = tf.matmul(l_out_x, Ws_out) + bs_out
+        pred_2D = np.pi*tf.tanh(tf.matmul(l_out_x, Ws_out) + bs_out)
         # reshape prediction value to (batch_size, max_steps, out_size)
         pred_3D = tf.reshape(pred_2D, [-1, self.max_steps, self.output_size], name='pred_3D')
         return pred_3D
@@ -195,7 +196,7 @@ class BiLSTMRNN(LSTMRNN):
         # bs (out_size,)
         bs_out = self._bias_variable([self.output_size, ])
         # (batch*max_steps, out_size)
-        pred_2D = tf.matmul(l_out_x, Ws_out) + bs_out
+        pred_2D = np.pi*tf.tanh(tf.matmul(l_out_x, Ws_out) + bs_out)
         # reshape prediction value to (batch_size, max_steps, out_size)
         pred_3D = tf.reshape(pred_2D, [-1, self.max_steps, self.output_size], name='pred_3D')
         return pred_3D
